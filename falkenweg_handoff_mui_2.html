@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Falkenweg Plan Handoff — MUI Combined</title>
+<style>
+  :root{
+    --primary:#1876D2;
+    --primary-dark:#125EA8;
+    --primary-light:#E3F0FC;
+    --success:#2E7D32;
+    --success-light:#E8F5E9;
+    --warning:#ED6C02;
+    --warning-light:#FFF4E5;
+    --error:#D32F2F;
+    --error-light:#FDECEA;
+    --bg:#F4F5F7;
+    --surface:#FFFFFF;
+    --ink-1:#1C1C1E;
+    --ink-2:#3A3A3C;
+    --ink-3:#6E6E73;
+    --ink-4:#8E8E93;
+    --line:rgba(0,0,0,0.12);
+    --line-soft:rgba(0,0,0,0.07);
+    --radius:8px;
+    --radius-lg:12px;
+    --e1:0 1px 2px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);
+    --e2:0 1px 5px rgba(0,0,0,0.10), 0 2px 2px rgba(0,0,0,0.06);
+    --e4:0 2px 4px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.08);
+    --e8:0 5px 5px rgba(0,0,0,0.10), 0 8px 20px rgba(0,0,0,0.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink-1);
+    font-family:Roboto,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  button{font-family:inherit;}
+  .app{max-width:1180px;margin:0 auto;min-height:100vh;background:var(--bg);}
+
+  /* ---------- App Bar ---------- */
+  .appbar{background:var(--primary);color:#fff;padding:0 20px;height:64px;
+    display:flex;align-items:center;justify-content:space-between;box-shadow:var(--e2);
+    position:sticky;top:0;z-index:50;}
+  .appbar-left{display:flex;align-items:center;gap:12px;}
+  .appbar-logo{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,0.16);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;}
+  .appbar-title{font-size:17px;font-weight:500;letter-spacing:.1px;}
+  .appbar-sub{font-size:12px;opacity:.85;font-weight:400;margin-top:1px;}
+  .role-tabs{display:flex;background:rgba(255,255,255,0.14);border-radius:20px;padding:3px;}
+  .role-tab{border:none;background:transparent;color:#fff;opacity:.75;padding:8px 18px;
+    border-radius:18px;font-size:13px;font-weight:500;cursor:pointer;transition:.15s;}
+  .role-tab.active{background:#fff;color:var(--primary);opacity:1;box-shadow:var(--e1);}
+
+  /* ---------- Deadline banner ---------- */
+  .deadline{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;
+    font-weight:500;border-bottom:1px solid var(--line-soft);}
+  .deadline.ok{background:var(--warning-light);color:#8a4a02;}
+  .deadline.crit{background:var(--error-light);color:#9c1f1f;}
+  .deadline b{font-variant-numeric:tabular-nums;}
+
+  /* ---------- Layout ---------- */
+  .body{padding:20px;display:grid;gap:16px;}
+  .card{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--e1);
+    border:1px solid var(--line-soft);padding:18px 20px;}
+  .card-title{font-size:15px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px;}
+  .card-sub{font-size:12.5px;color:var(--ink-3);margin:0 0 14px;}
+  .section-label{font-size:11px;font-weight:700;color:var(--ink-4);text-transform:uppercase;
+    letter-spacing:.6px;margin:0 0 10px;}
+
+  /* ---------- Buttons ---------- */
+  .btn{border-radius:var(--radius);border:none;padding:10px 20px;font-size:13.5px;
+    font-weight:500;cursor:pointer;letter-spacing:.2px;transition:.15s;}
+  .btn-contained{background:var(--primary);color:#fff;box-shadow:var(--e1);}
+  .btn-contained:hover{background:var(--primary-dark);}
+  .btn-contained:disabled{background:#C7C7CC;color:#fff;cursor:not-allowed;box-shadow:none;}
+  .btn-outlined{background:transparent;border:1.5px solid var(--primary);color:var(--primary);}
+  .btn-outlined:disabled{border-color:#C7C7CC;color:#C7C7CC;cursor:not-allowed;}
+  .btn-text{background:transparent;color:var(--primary);padding:8px 12px;}
+  .btn-error{background:var(--error);color:#fff;}
+  .btn-success{background:var(--success);color:#fff;}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+
+  /* ---------- Chips ---------- */
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;
+    border:1.5px solid var(--line);background:#fff;font-size:13px;font-weight:500;
+    color:var(--ink-2);cursor:pointer;transition:.12s;}
+  .chip:hover{border-color:var(--primary);}
+  .chip.selected{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark);}
+  .chip-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .badge{display:inline-block;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:700;
+    letter-spacing:.3px;}
+  .badge-warn{background:var(--warning-light);color:#8a4a02;}
+  .badge-err{background:var(--error-light);color:#9c1f1f;}
+  .badge-ok{background:var(--success-light);color:#1b5e20;}
+  .badge-neutral{background:#EEEEF0;color:var(--ink-3);}
+
+  /* ---------- Stepper (timeline) ---------- */
+  .stepper{display:flex;align-items:flex-start;overflow-x:auto;padding:4px 2px;gap:0;}
+  .step{display:flex;flex-direction:column;align-items:center;min-width:96px;position:relative;}
+  .step-dot{width:26px;height:26px;border-radius:50%;background:#DADADE;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
+    z-index:2;flex-shrink:0;}
+  .step.done .step-dot{background:var(--success);}
+  .step.active .step-dot{background:var(--primary);box-shadow:0 0 0 4px var(--primary-light);}
+  .step-line{position:absolute;top:13px;left:calc(-50% + 13px);width:100%;height:2px;background:#DADADE;z-index:1;}
+  .step.done .step-line, .step.active .step-line{background:var(--success);}
+  .step:first-child .step-line{display:none;}
+  .step-label{font-size:10.5px;color:var(--ink-3);text-align:center;margin-top:6px;
+    max-width:96px;line-height:1.3;}
+  .step.active .step-label{color:var(--primary);font-weight:600;}
+
+  /* ---------- Floor plan ---------- */
+  .plan-wrap{background:#FAFAFB;border:1px solid var(--line-soft);border-radius:var(--radius);
+    padding:10px;}
+  .plan-wrap svg{width:100%;height:auto;display:block;}
+  .wall{stroke:#B8B8BE;stroke-width:6;cursor:pointer;transition:.12s;}
+  .wall:hover{stroke:#8E8E93;}
+  .wall.selected{stroke:var(--error);stroke-width:8;}
+  .wall.phantom{stroke-dasharray:4 4;}
+  .room-label{font-size:11px;fill:var(--ink-3);font-family:Roboto,sans-serif;}
+
+  /* ---------- Keypad ---------- */
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:280px;margin-top:10px;}
+  .key{background:#F4F5F7;border:1px solid var(--line-soft);border-radius:var(--radius);
+    padding:16px 0;font-size:19px;font-weight:600;color:var(--ink-1);cursor:pointer;text-align:center;}
+  .key:active{background:var(--primary-light);}
+  .measure-display{font-size:30px;font-weight:700;text-align:center;padding:14px;
+    background:#F4F5F7;border-radius:var(--radius);margin-bottom:10px;font-variant-numeric:tabular-nums;}
+  .measure-display .unit{font-size:15px;color:var(--ink-3);font-weight:500;margin-left:4px;}
+  .diff-flag{font-size:12.5px;color:var(--error);font-weight:600;text-align:center;margin-top:6px;}
+
+  /* ---------- Photo gallery ---------- */
+  .gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;}
+  .photo-tile{aspect-ratio:1;border-radius:var(--radius);overflow:hidden;position:relative;
+    cursor:pointer;box-shadow:var(--e1);border:1px solid var(--line-soft);}
+  .photo-tile img{width:100%;height:100%;object-fit:cover;display:block;}
+  .photo-tile .tag{position:absolute;bottom:5px;left:5px;background:rgba(0,0,0,0.6);color:#fff;
+    font-size:9.5px;padding:2px 7px;border-radius:8px;font-weight:600;}
+  .add-photo{aspect-ratio:1;border-radius:var(--radius);border:2px dashed var(--line);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    color:var(--primary);cursor:pointer;font-size:11px;font-weight:600;background:var(--primary-light);}
+  .add-photo .icon{font-size:22px;}
+
+  /* ---------- Lightbox ---------- */
+  .lightbox-scrim{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;
+    align-items:center;justify-content:center;z-index:200;}
+  .lightbox{background:#000;border-radius:var(--radius-lg);overflow:hidden;max-width:90vw;max-height:85vh;
+    position:relative;box-shadow:var(--e8);}
+  .lightbox img{max-width:90vw;max-height:78vh;display:block;}
+  .lightbox-caption{background:#111;color:#fff;padding:10px 16px;font-size:12.5px;
+    display:flex;justify-content:space-between;align-items:center;}
+  .lightbox-close{position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.15);
+    color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;}
+
+  /* ---------- Checklist ---------- */
+  .check-item{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line-soft);
+    font-size:13.5px;}
+  .check-item:last-child{border-bottom:none;}
+  .check-box{width:19px;height:19px;border-radius:4px;border:2px solid var(--line);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;}
+  .check-box.done{background:var(--success);border-color:var(--success);}
+  .check-item.pending{color:var(--ink-4);}
+  .check-item.done{color:var(--ink-1);}
+
+  /* ---------- Progress / sync ---------- */
+  .lin-progress{height:4px;background:var(--line-soft);border-radius:2px;overflow:hidden;margin-top:8px;}
+  .lin-progress-bar{height:100%;background:var(--primary);border-radius:2px;transition:width .4s;}
+  .sync-row{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-3);padding:5px 0;}
+  .sync-row .dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex-shrink:0;}
+  .sync-row.done .dot{background:var(--success);}
+  .sync-row.active .dot{background:var(--primary);box-shadow:0 0 0 3px var(--primary-light);}
+  .sync-row.done{color:var(--ink-1);}
+
+  /* ---------- Ines inbox / table ---------- */
+  .ticket-row{display:flex;align-items:center;gap:14px;padding:14px;border-radius:var(--radius);
+    border:1px solid var(--line-soft);cursor:pointer;transition:.12s;}
+  .ticket-row:hover{border-color:var(--primary);background:var(--primary-light);}
+  .ticket-avatar{width:38px;height:38px;border-radius:50%;background:var(--warning-light);
+    color:#8a4a02;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+  .ticket-meta{flex:1;min-width:0;}
+  .ticket-title{font-size:13.5px;font-weight:600;margin:0 0 2px;}
+  .ticket-sub{font-size:12px;color:var(--ink-3);}
+
+  .diff-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;}
+  .diff-table th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--ink-4);padding:6px 8px;border-bottom:1px solid var(--line);}
+  .diff-table td{padding:9px 8px;border-bottom:1px solid var(--line-soft);}
+  .diff-table .mismatch{color:var(--error);font-weight:700;}
+
+  /* ---------- Drawer ---------- */
+  .drawer-scrim{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:150;
+    display:flex;justify-content:flex-end;}
+  .drawer{width:380px;max-width:92vw;background:#fff;height:100%;box-shadow:var(--e8);
+    padding:22px;overflow-y:auto;}
+  .drawer h3{margin:0 0 4px;font-size:16px;}
+  .field{margin-top:14px;}
+  .field label{font-size:11.5px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:5px;
+    text-transform:uppercase;letter-spacing:.4px;}
+  .field textarea, .field input{width:100%;border:1.5px solid var(--line);border-radius:var(--radius);
+    padding:10px 12px;font-size:13.5px;font-family:inherit;resize:vertical;}
+  .field textarea:focus,.field input:focus{outline:none;border-color:var(--primary);}
+
+  /* ---------- Snackbar ---------- */
+  .snackbar{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#323238;
+    color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;box-shadow:var(--e4);
+    z-index:300;display:flex;align-items:center;gap:12px;opacity:0;pointer-events:none;
+    transition:opacity .25s,transform .25s;}
+  .snackbar.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* ---------- Empty / misc ---------- */
+  .flow-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;}
+  @media(max-width:860px){.flow-grid{grid-template-columns:1fr;}}
+  .info-row{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;
+    border-bottom:1px solid var(--line-soft);}
+  .info-row span:first-child{color:var(--ink-3);}
+  .info-row span:last-child{font-weight:600;}
+  .hint{font-size:12px;color:var(--ink-4);margin-top:8px;}
+  .fab{position:fixed;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;
+    background:var(--primary);color:#fff;border:none;font-size:22px;box-shadow:var(--e4);
+    cursor:pointer;z-index:60;}
+  .reset-link{font-size:11.5px;color:var(--ink-4);cursor:pointer;text-decoration:underline;}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+/* =========================================================
+   FALKENWEG PLAN HANDOFF — combined MUI clickdummy
+   Merges:
+   - dark clickdummy's mechanics: SVG wall selection, glove keypad,
+     evidence checklist gating, offline sync queue, audit timeline
+   - React app's full ticket lifecycle & structured request-info drawer
+   - real-magicplan reskin: photo gallery tiles + lightbox, brand blue
+   Restyled on Material Design / MUI tokens (primary #1876D2, Roboto)
+   ========================================================= */
+
+const STEPS = [
+  {id:'draft', label:'Report started'},
+  {id:'queued', label:'Queued (offline)'},
+  {id:'syncing', label:'Syncing'},
+  {id:'delivered', label:'Delivered to office'},
+  {id:'review', label:'Ines reviewing'},
+  {id:'correcting', label:'Applying correction'},
+  {id:'published', label:'Published'},
+];
+
+let state = {
+  role: 'marek', // marek | ines
+  // Marek wizard
+  wizardStep: 1, // 1 reason, 2 wall, 3 measure, 4 photos, 5 checklist
+  reasons: [],
+  wallId: null,
+  measurement: '',
+  photos: [],
+  submitted: false,
+  syncPhase: 0, // 0 none,1 queued,2 metadata,3 photos,4 delivered
+  // Ticket lifecycle (shared)
+  ticketState: 'draft', // draft, queued, syncing, delivered, review, awaiting_info, correcting, published
+  // Ines
+  drawerOpen: false,
+  requestMsg: '',
+  lightboxPhoto: null,
+  deadlineMin: 96, // minutes remaining until 15:00
+  snackbar: '',
+};
+
+const REASONS = [
+  {id:'blocked', label:'Work is completely blocked'},
+  {id:'crew_waiting', label:'3 workers are waiting'},
+  {id:'permit', label:'Possible permit conflict'},
+];
+const WALLS = [
+  {id:'W01', x1:40, y1:40, x2:220, y2:40, phantom:false, label:'Front wall'},
+  {id:'W02', x1:220, y1:40, x2:220, y2:180, phantom:true, label:'Wall shown, not present on site'},
+  {id:'W03', x1:220, y1:180, x2:40, y2:180, phantom:false, label:'Rear wall — measurement flagged'},
+  {id:'W04', x1:40, y1:180, x2:40, y2:40, phantom:false, label:'Side wall'},
+];
+const PLAN_MEASURE = 320; // cm on the plan for rear wall
+const PHOTO_TAGS = ['Rear wall', 'Rear wall', 'Missing wall gap'];
+
+function setState(patch){ state = {...state, ...patch}; render(); }
+function showSnack(msg){ state.snackbar = msg; render();
+  clearTimeout(window.__snackT);
+  window.__snackT = setTimeout(()=>{ state.snackbar=''; render(); }, 2600); }
+
+function fmtClock(min){
+  const h = Math.floor(min/60), m = min%60;
+  const arriveH = 13 + h, arriveM = m; // just for display purposes, countdown framing
+  return `${String(min).padStart(2,'0')} min to 15:00`;
+}
+
+function stepIndexFor(ticketState){
+  const map = {draft:0, queued:1, syncing:2, delivered:3, review:4, awaiting_info:4, correcting:5, published:6};
+  return map[ticketState] ?? 0;
+}
+
+/* ---------------- Render root ---------------- */
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    ${appBar()}
+    ${deadlineBanner()}
+    <div class="body">
+      ${timeline()}
+      ${state.role==='marek' ? marekView() : inesView()}
+    </div>
+    ${state.role==='marek' ? '<button class="fab" onclick="quickReset()" title="Reset scenario">&#8635;</button>' : ''}
+    ${state.lightboxPhoto ? lightbox() : ''}
+    ${state.drawerOpen ? drawer() : ''}
+    <div class="snackbar ${state.snackbar?'show':''}">${state.snackbar}</div>
+  `;
+}
+
+function appBar(){
+  return `
+  <div class="appbar">
+    <div class="appbar-left">
+      <div class="appbar-logo">FW</div>
+      <div>
+        <div class="appbar-title">Falkenweg — Plan Handoff</div>
+        <div class="appbar-sub">Berlin, Basement · Ticket #FW-0142</div>
+      </div>
+    </div>
+    <div class="role-tabs">
+      <button class="role-tab ${state.role==='marek'?'active':''}" onclick="switchRole('marek')">Marek · Field</button>
+      <button class="role-tab ${state.role==='ines'?'active':''}" onclick="switchRole('ines')">Ines · Office</button>
+    </div>
+  </div>`;
+}
+function switchRole(r){ setState({role:r}); }
+
+function deadlineBanner(){
+  const crit = state.deadlineMin <= 30;
+  return `<div class="deadline ${crit?'crit':'ok'}">
+    ${crit?'&#9888;':'&#9200;'} Ines leaves the Munich office at 15:00 — <b>${fmtClock(state.deadlineMin)}</b> remaining to confirm the correction.
+  </div>`;
+}
+
+function timeline(){
+  const idx = stepIndexFor(state.ticketState);
+  return `<div class="card">
+    <div class="section-label">Shared audit timeline</div>
+    <div class="stepper">
+      ${STEPS.map((s,i)=>`
+        <div class="step ${i<idx?'done':''} ${i===idx?'active':''}">
+          <div class="step-line"></div>
+          <div class="step-dot">${i<idx?'&#10003;':i+1}</div>
+          <div class="step-label">${s.label}</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+/* ================= MAREK VIEW ================= */
+function marekView(){
+  if(state.ticketState==='draft'){
+    return `<div class="flow-grid">
+      <div>${marekWizardCard()}</div>
+      <div>${planCard(true)}</div>
+    </div>`;
+  }
+  if(['queued','syncing'].includes(state.ticketState)){
+    return syncCard();
+  }
+  return marekStatusCard();
+}
+
+function marekWizardCard(){
+  const step = state.wizardStep;
+  let inner = '';
+  if(step===1){
+    inner = `
+      <div class="section-label">1 · Why does this need attention now?</div>
+      <div class="chip-row">
+        ${REASONS.map(r=>`<div class="chip ${state.reasons.includes(r.id)?'selected':''}" onclick="toggleReason('${r.id}')">${r.label}</div>`).join('')}
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-contained" ${state.reasons.length?'':'disabled'} onclick="setState({wizardStep:2})">Next: select wall</button>
+      </div>`;
+  } else if(step===2){
+    inner = `
+      <div class="section-label">2 · Tap the wall that doesn't match the site</div>
+      ${planSvg(true)}
+      <div class="hint">${state.wallId ? WALLS.find(w=>w.id===state.wallId).label : 'No wall selected yet.'}</div>
+      <div class="btn-row">
+        <button class="btn btn-text" onclick="setState({wizardStep:1})">Back</button>
+        <button class="btn btn-contained" ${state.wallId?'':'disabled'} onclick="setState({wizardStep:3})">Next: measurement</button>
+      </div>`;
+  } else if(step===3){
+    const diff = state.measurement ? (parseInt(state.measurement)-PLAN_MEASURE) : null;
+    inner = `
+      <div class="section-label">3 · Measure the wall on site (cm)</div>
+      <div class="measure-display">${state.measurement||'0'}<span class="unit">cm</span></div>
+      ${diff!==null && Math.abs(diff)>=10 ? `<div class="diff-flag">Plan shows ${PLAN_MEASURE} cm — that's a ${diff>0?'+':''}${diff} cm difference</div>`:''}
+      <div class="keypad">
+        ${[1,2,3,4,5,6,7,8,9].map(n=>`<div class="key" onclick="keypadPress('${n}')">${n}</div>`).join('')}
+        <div class="key" onclick="keypadPress('clear')">C</div>
+        <div class="key" onclick="keypadPress('0')">0</div>
+        <div class="key" onclick="keypadPress('back')">&#9003;</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-text" onclick="setState({wizardStep:2})">Back</button>
+        <button class="btn btn-contained" ${state.measurement?'':'disabled'} onclick="setState({wizardStep:4})">Next: photos</button>
+      </div>`;
+  } else if(step===4){
+    inner = `
+      <div class="section-label">4 · Attach reference photos</div>
+      <div class="gallery-grid">
+        ${state.photos.map((p,i)=>`
+          <div class="photo-tile" onclick='openLightbox(${i})'>
+            <img src="${p.src}">
+            <div class="tag">${p.tag}</div>
+          </div>`).join('')}
+        <div class="add-photo" onclick="addPhoto()">
+          <div class="icon">&#128247;</div>Add photo
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-text" onclick="setState({wizardStep:3})">Back</button>
+        <button class="btn btn-contained" ${state.photos.length?'':'disabled'} onclick="setState({wizardStep:5})">Next: review</button>
+      </div>`;
+  } else if(step===5){
+    const items = [
+      {label:'Issue reason selected', done: state.reasons.length>0},
+      {label:'Wall identified on plan', done: !!state.wallId},
+      {label:'Measurement recorded', done: !!state.measurement},
+      {label:'At least one photo attached', done: state.photos.length>0},
+    ];
+    const allDone = items.every(i=>i.done);
+    inner = `
+      <div class="section-label">5 · Evidence checklist</div>
+      ${items.map(i=>`
+        <div class="check-item ${i.done?'done':'pending'}">
+          <div class="check-box ${i.done?'done':''}">${i.done?'&#10003;':''}</div>${i.label}
+        </div>`).join('')}
+      <div class="btn-row">
+        <button class="btn btn-text" onclick="setState({wizardStep:4})">Back</button>
+        <button class="btn btn-contained" ${allDone?'':'disabled'} onclick="submitReport()">Submit to office</button>
+      </div>`;
+  }
+  return `<div class="card">
+    <div class="card-title">&#128736; Report a plan mismatch</div>
+    <div class="card-sub">Step ${step} of 5</div>
+    ${inner}
+  </div>`;
+}
+
+function planCard(compact){
+  return `<div class="card">
+    <div class="card-title">Reference floor plan</div>
+    <div class="card-sub">Falkenweg — Basement, Zone B</div>
+    ${planSvg(false)}
+    <div class="hint">Dashed wall = shown on plan, phantom on site. Red = flagged by Marek.</div>
+  </div>`;
+}
+
+function planSvg(selectable){
+  return `<div class="plan-wrap"><svg viewBox="0 0 260 220">
+    <rect x="8" y="8" width="244" height="204" fill="#fff" stroke="#EDEDF0"/>
+    ${WALLS.map(w=>`
+      ${selectable?`<line x1="${w.x1}" y1="${w.y1}" x2="${w.x2}" y2="${w.y2}"
+        stroke="transparent" stroke-width="34" style="cursor:pointer;"
+        onclick="selectWall('${w.id}')" />`:''}
+      <line class="wall ${w.phantom?'phantom':''} ${state.wallId===w.id?'selected':''}"
+        x1="${w.x1}" y1="${w.y1}" x2="${w.x2}" y2="${w.y2}"
+        style="pointer-events:none;" />
+    `).join('')}
+    <text class="room-label" x="90" y="115">Basement · Zone B</text>
+  </svg></div>`;
+}
+
+function syncCard(){
+  const rows = [
+    {id:1, label:'Queued — waiting for signal', phase:1},
+    {id:2, label:'Syncing ticket metadata', phase:2},
+    {id:3, label:'Syncing photo evidence', phase:3},
+    {id:4, label:'Delivered to office', phase:4},
+  ];
+  const pct = Math.min(100, state.syncPhase*25);
+  return `<div class="card">
+    <div class="card-title">&#128246; Sending to office</div>
+    <div class="card-sub">Weak cellular connection on site — evidence is queued and sent as signal allows.</div>
+    <div class="lin-progress"><div class="lin-progress-bar" style="width:${pct}%"></div></div>
+    <div style="margin-top:14px;">
+      ${rows.map(r=>`
+        <div class="sync-row ${state.syncPhase>=r.phase?'done':(state.syncPhase===r.phase-1?'active':'')}">
+          <div class="dot"></div>${r.label}
+        </div>`).join('')}
+    </div>
+    ${state.syncPhase<4?`<div class="btn-row"><button class="btn btn-outlined" onclick="advanceSync()">Simulate signal / advance sync</button></div>`
+      : `<div class="btn-row"><button class="btn btn-contained" onclick="setState({ticketState:'delivered'})">Continue</button></div>`}
+  </div>`;
+}
+
+function marekStatusCard(){
+  const ts = state.ticketState;
+  let body = '';
+  if(ts==='delivered' || ts==='review'){
+    body = `<div class="badge badge-warn">Waiting on Ines</div>
+      <p class="hint" style="margin-top:10px;">Your report is with the office. You'll be notified here the moment Ines responds — no need to call.</p>`;
+  } else if(ts==='awaiting_info'){
+    body = `<div class="badge badge-err">Ines needs one more detail</div>
+      <div class="card" style="margin-top:12px;background:#FAFAFB;">
+        <div class="card-title" style="font-size:13.5px;">${state.requestMsg || 'Could you confirm whether W02 is fully absent, or just relocated?'}</div>
+      </div>
+      <div class="field"><label>Your reply</label><textarea rows="3" id="marekReply" placeholder="Type your answer for Ines…"></textarea></div>
+      <div class="btn-row"><button class="btn btn-contained" onclick="marekReply()">Send reply</button></div>`;
+  } else if(ts==='correcting'){
+    body = `<div class="badge badge-ok">Confirmed — Ines is applying the correction</div>
+      <p class="hint" style="margin-top:10px;">The plan will update automatically once done.</p>`;
+  } else if(ts==='published'){
+    body = `<div class="badge badge-ok">Plan corrected &amp; published</div>
+      <p class="hint" style="margin-top:10px;">W02 removed, rear wall measurement updated to your on-site reading. You can resume work.</p>`;
+  }
+  return `<div class="card">
+    <div class="card-title">&#9989; Ticket #FW-0142 status</div>
+    ${body}
+  </div>`;
+}
+
+/* ---- Marek interactions ---- */
+function toggleReason(id){
+  const has = state.reasons.includes(id);
+  setState({reasons: has ? state.reasons.filter(r=>r!==id) : [...state.reasons, id]});
+}
+function selectWall(id){ setState({wallId:id}); }
+function keypadPress(k){
+  let m = state.measurement;
+  if(k==='clear'){ m=''; }
+  else if(k==='back'){ m=m.slice(0,-1); }
+  else { if(m.length<3) m+=k; }
+  setState({measurement:m});
+}
+function addPhoto(){
+  const n = state.photos.length;
+  const tag = PHOTO_TAGS[n % PHOTO_TAGS.length];
+  const seed = 20+n;
+  setState({photos:[...state.photos, {src:`https://picsum.photos/seed/fw${seed}/400/400`, tag}]});
+  showSnack('Photo attached');
+}
+function openLightbox(i){ setState({lightboxPhoto: state.photos[i]}); }
+function submitReport(){
+  setState({submitted:true, ticketState:'queued', syncPhase:1});
+  showSnack('Report queued — will sync when signal allows');
+}
+function advanceSync(){
+  const next = state.syncPhase+1;
+  const ts = next>=4 ? 'delivered' : 'syncing';
+  setState({syncPhase:next, ticketState: ts});
+  if(next>=4) showSnack('Delivered to Ines in the office');
+}
+function marekReply(){
+  const val = document.getElementById('marekReply')?.value || 'Confirmed — W02 is fully absent, not relocated.';
+  setState({ticketState:'review', requestMsg:''});
+  showSnack('Reply sent to Ines');
+}
+function quickReset(){
+  state = {...state, wizardStep:1, reasons:[], wallId:null, measurement:'', photos:[],
+    submitted:false, syncPhase:0, ticketState:'draft', drawerOpen:false, requestMsg:'',
+    lightboxPhoto:null, deadlineMin:96};
+  render();
+}
+
+/* ================= INES VIEW ================= */
+function inesView(){
+  if(!state.submitted || ['draft','queued','syncing'].includes(state.ticketState)){
+    return `<div class="card">
+      <div class="card-title">&#128194; Inbox</div>
+      <div class="card-sub">No tickets from Marek yet — waiting for the field report to sync.</div>
+    </div>`;
+  }
+  if(state.ticketState==='delivered' || state.ticketState==='review'){
+    return inesReviewCard();
+  }
+  if(state.ticketState==='awaiting_info'){
+    return `<div class="card">
+      <div class="card-title">&#8987; Waiting on Marek</div>
+      <div class="card-sub">You asked: "${state.requestMsg}"</div>
+      <div class="badge badge-warn" style="margin-top:6px;">Request sent — no reply yet</div>
+    </div>`;
+  }
+  if(state.ticketState==='correcting'){
+    return `<div class="card">
+      <div class="card-title">&#9881; Applying correction…</div>
+      <div class="lin-progress"><div class="lin-progress-bar" style="width:70%"></div></div>
+      <div class="btn-row"><button class="btn btn-contained" onclick="finishCorrection()">Finish &amp; publish</button></div>
+    </div>`;
+  }
+  if(state.ticketState==='published'){
+    return `<div class="card">
+      <div class="card-title">&#9989; Published</div>
+      <div class="badge badge-ok">Plan corrected and pushed to Falkenweg site</div>
+      <p class="hint" style="margin-top:10px;">Marek has been notified. Ticket #FW-0142 closed.</p>
+    </div>`;
+  }
+}
+
+function inesReviewCard(){
+  const diff = state.measurement ? parseInt(state.measurement)-PLAN_MEASURE : 0;
+  return `<div class="flow-grid">
+    <div class="card">
+      <div class="card-title">&#128203; Ticket #FW-0142 — Falkenweg, Basement</div>
+      <div class="card-sub">Reported by Marek · Site crew lead</div>
+      <div class="ticket-row" style="margin-bottom:14px;cursor:default;">
+        <div class="ticket-avatar">M</div>
+        <div class="ticket-meta">
+          <div class="ticket-title">${REASONS.filter(r=>state.reasons.includes(r.id)).map(r=>r.label).join(' · ')||'Plan mismatch reported'}</div>
+          <div class="ticket-sub">Wall ${state.wallId} flagged · ${state.photos.length} photo(s) attached</div>
+        </div>
+      </div>
+      <table class="diff-table">
+        <tr><th>Field</th><th>Plan value</th><th>On-site reading</th></tr>
+        <tr><td>Rear wall (W03) length</td><td>${PLAN_MEASURE} cm</td>
+          <td class="${Math.abs(diff)>=10?'mismatch':''}">${state.measurement||'—'} cm ${Math.abs(diff)>=10?`(${diff>0?'+':''}${diff} cm)`:''}</td></tr>
+        <tr><td>Wall ${WALLS.find(w=>w.id==='W02')?.id}</td><td>Present on plan</td>
+          <td class="mismatch">Not found on site</td></tr>
+      </table>
+      <div style="margin-top:14px;">${planSvg(false)}</div>
+      <div class="btn-row">
+        <button class="btn btn-outlined" onclick="setState({drawerOpen:true})">Request more detail</button>
+        <button class="btn btn-error" onclick="showSnack('Marked as rejected — needs re-survey')">Reject</button>
+        <button class="btn btn-success" onclick="confirmAndCorrect()">Confirm &amp; correct plan</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-label">Photo evidence</div>
+      <div class="gallery-grid">
+        ${state.photos.map((p,i)=>`
+          <div class="photo-tile" onclick='openLightbox(${i})'>
+            <img src="${p.src}"><div class="tag">${p.tag}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function confirmAndCorrect(){
+  setState({ticketState:'correcting'});
+  showSnack('Correction started');
+}
+function finishCorrection(){
+  setState({ticketState:'published'});
+  showSnack('Plan published to site');
+}
+
+/* ---- Drawer (Ines request-info) ---- */
+function drawer(){
+  return `<div class="drawer-scrim" onclick="closeDrawerIfScrim(event)">
+    <div class="drawer">
+      <h3>Request more detail</h3>
+      <p class="hint">This goes straight to Marek's device — no phone call needed.</p>
+      <div class="field">
+        <label>What do you need to know?</label>
+        <textarea rows="4" id="drawerMsg" placeholder="e.g. Is W02 fully absent, or just relocated on site?"></textarea>
+      </div>
+      <div class="field">
+        <label>Suggested prompts</label>
+        <div class="chip-row">
+          <div class="chip" onclick="fillDrawer('Please confirm whether W02 is fully absent, or just relocated.')">Wall status</div>
+          <div class="chip" onclick="fillDrawer('Can you re-measure the rear wall from the opposite corner?')">Re-measure</div>
+          <div class="chip" onclick="fillDrawer('One more wide-angle photo of the rear wall, please.')">More photo</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-text" onclick="setState({drawerOpen:false})">Cancel</button>
+        <button class="btn btn-contained" onclick="sendRequest()">Send request</button>
+      </div>
+    </div>
+  </div>`;
+}
+function fillDrawer(t){ document.getElementById('drawerMsg').value = t; }
+function closeDrawerIfScrim(e){ if(e.target.classList.contains('drawer-scrim')) setState({drawerOpen:false}); }
+function sendRequest(){
+  const msg = document.getElementById('drawerMsg').value || 'Please confirm whether W02 is fully absent, or just relocated.';
+  setState({drawerOpen:false, ticketState:'awaiting_info', requestMsg:msg});
+  showSnack('Request sent to Marek');
+}
+
+/* ---- Lightbox ---- */
+function lightbox(){
+  const p = state.lightboxPhoto;
+  return `<div class="lightbox-scrim" onclick="closeLightboxIfScrim(event)">
+    <div class="lightbox">
+      <button class="lightbox-close" onclick="setState({lightboxPhoto:null})">&#10005;</button>
+      <img src="${p.src}">
+      <div class="lightbox-caption"><span>${p.tag}</span><span>Falkenweg · Zone B</span></div>
+    </div>
+  </div>`;
+}
+function closeLightboxIfScrim(e){ if(e.target.classList.contains('lightbox-scrim')) setState({lightboxPhoto:null}); }
+
+render();
+</script>
+</body>
+</html>
