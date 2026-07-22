@@ -46,6 +46,9 @@
     display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;}
   .appbar-title{font-size:17px;font-weight:500;letter-spacing:.1px;}
   .appbar-sub{font-size:12px;opacity:.85;font-weight:400;margin-top:1px;}
+  .live-clock{font-size:13px;font-weight:600;color:rgba(255,255,255,0.92);
+    font-variant-numeric:tabular-nums;letter-spacing:.4px;margin-right:16px;
+    background:rgba(255,255,255,0.14);padding:6px 12px;border-radius:14px;}
   .role-tabs{display:flex;background:rgba(255,255,255,0.14);border-radius:20px;padding:3px;}
   .role-tab{border:none;background:transparent;color:#fff;opacity:.75;padding:8px 18px;
     border-radius:18px;font-size:13px;font-weight:500;cursor:pointer;transition:.15s;}
@@ -96,10 +99,11 @@
 
   /* ---------- Stepper (timeline) ---------- */
   .stepper{display:flex;align-items:flex-start;overflow-x:auto;padding:4px 2px;gap:0;}
-  .step{display:flex;flex-direction:column;align-items:center;min-width:96px;position:relative;}
+  .step{display:flex;flex-direction:column;align-items:center;min-width:96px;position:relative;cursor:pointer;}
+  .step:hover .step-dot{transform:scale(1.1);}
   .step-dot{width:26px;height:26px;border-radius:50%;background:#DADADE;color:#fff;
     display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
-    z-index:2;flex-shrink:0;}
+    z-index:2;flex-shrink:0;transition:.15s;}
   .step.done .step-dot{background:var(--success);}
   .step.active .step-dot{background:var(--primary);box-shadow:0 0 0 4px var(--primary-light);}
   .step-line{position:absolute;top:13px;left:calc(-50% + 13px);width:100%;height:2px;background:#DADADE;z-index:1;}
@@ -219,6 +223,23 @@
     background:var(--primary);color:#fff;border:none;font-size:22px;box-shadow:var(--e4);
     cursor:pointer;z-index:60;}
   .reset-link{font-size:11.5px;color:var(--ink-4);cursor:pointer;text-decoration:underline;}
+
+  /* ---------- Wizard mini-stepper (clickable) ---------- */
+  .wiz-stepper{display:flex;margin-bottom:18px;}
+  .wiz-step{display:flex;flex-direction:column;align-items:center;flex:1;cursor:pointer;
+    position:relative;padding-top:2px;}
+  .wiz-step:not(:last-child)::after{content:'';position:absolute;top:15px;left:56%;
+    width:88%;height:2px;background:var(--line);z-index:0;}
+  .wiz-step.done:not(:last-child)::after{background:var(--success);}
+  .wiz-dot{width:26px;height:26px;border-radius:50%;background:#DADADE;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
+    z-index:1;transition:.15s;}
+  .wiz-step:hover .wiz-dot{transform:scale(1.08);}
+  .wiz-step.done .wiz-dot{background:var(--success);}
+  .wiz-step.active .wiz-dot{background:var(--primary);box-shadow:0 0 0 4px var(--primary-light);}
+  .wiz-label{font-size:10px;color:var(--ink-3);margin-top:5px;text-align:center;}
+  .wiz-step.active .wiz-label{color:var(--primary);font-weight:600;}
+  .wiz-step.done .wiz-label{color:var(--ink-1);}
 </style>
 </head>
 <body>
@@ -239,10 +260,12 @@ const STEPS = [
   {id:'draft', label:'Report started'},
   {id:'queued', label:'Queued (offline)'},
   {id:'syncing', label:'Syncing'},
-  {id:'delivered', label:'Delivered to office'},
+  {id:'delivered', label:'Office triage'},
   {id:'review', label:'Ines reviewing'},
   {id:'correcting', label:'Applying correction'},
   {id:'published', label:'Published'},
+  {id:'verifying', label:'Site verification'},
+  {id:'closed', label:'Ticket closed'},
 ];
 
 let state = {
@@ -257,12 +280,20 @@ let state = {
   syncPhase: 0, // 0 none,1 queued,2 metadata,3 photos,4 delivered
   // Ticket lifecycle (shared)
   ticketState: 'draft', // draft, queued, syncing, delivered, review, awaiting_info, correcting, published
+  // Office
+  officePriority: null, // 'standard' | 'urgent' | 'critical'
   // Ines
   drawerOpen: false,
   requestMsg: '',
+  rejectDrawerOpen: false,
+  rejectReason: '',
   lightboxPhoto: null,
   deadlineMin: 96, // minutes remaining until 15:00
   snackbar: '',
+  verifyAnswer: null,   // 'yes' | 'no'
+  reopenReason: null,
+  assignedTo: null,     // 'ines' | 'next' | 'specialist'
+  planVersion: 0,
 };
 
 const REASONS = [
@@ -279,19 +310,58 @@ const WALLS = [
 const PLAN_MEASURE = 320; // cm on the plan for rear wall
 const PHOTO_TAGS = ['Rear wall', 'Rear wall', 'Missing wall gap'];
 
+const STAGE_ROLE = {
+  draft:'marek', queued:'marek', syncing:'marek',
+  delivered:'office', review:'ines', correcting:'ines',
+  published:'marek', verifying:'marek', closed:'ines',
+};
+function jumpToStage(i){
+  const id = STEPS[i].id;
+  const patch = {ticketState:id, role: STAGE_ROLE[id] || state.role};
+  // Preview-only: if this stage is ahead of any data Marek would normally have
+  // filled in, backfill sensible demo values so the screen isn't empty.
+  if(i>=1){ patch.submitted = true; }
+  if(i>=0 && state.reasons.length===0){ patch.reasons = ['blocked','crew_waiting']; }
+  if(i>=1 && !state.wallId){ patch.wallId = 'W02'; }
+  if(i>=2 && !state.measurement){ patch.measurement = '280'; }
+  if(i>=3 && state.photos.length===0){
+    patch.photos = [
+      {src:'https://picsum.photos/seed/fw20/400/400', tag:'Rear wall'},
+      {src:'https://picsum.photos/seed/fw21/400/400', tag:'Rear wall'},
+    ];
+  }
+  if(id==='queued'){ patch.syncPhase = 1; }
+  if(id==='syncing'){ patch.syncPhase = 2; }
+  if(id==='delivered' && state.syncPhase<4){ patch.syncPhase = 4; }
+  if((id==='delivered' || i>3) && !state.officePriority){ patch.officePriority = 'urgent'; }
+  if(id==='published' || id==='verifying'){ if(!state.planVersion){ patch.planVersion = 1; } }
+  if(id==='closed'){ patch.verifyAnswer = 'yes'; if(!state.planVersion){ patch.planVersion = 1; } }
+  setState(patch);
+  showSnack('Previewing: '+STEPS[i].label);
+}
+
 function setState(patch){ state = {...state, ...patch}; render(); }
+const ROLE_LABEL = {marek:'Marek', office:'Office', ines:'Ines'};
+function continueAs(role){ setState({role}); }
+function continueBtn(role, note){
+  return `<div class="btn-row">
+    <button class="btn btn-outlined" onclick="continueAs('${role}')">Continue as ${ROLE_LABEL[role]} &#8594;</button>
+    ${note?`<span class="hint" style="align-self:center;margin-top:0;">${note}</span>`:''}
+  </div>`;
+}
 function showSnack(msg){ state.snackbar = msg; render();
   clearTimeout(window.__snackT);
   window.__snackT = setTimeout(()=>{ state.snackbar=''; render(); }, 2600); }
 
-function fmtClock(min){
-  const h = Math.floor(min/60), m = min%60;
-  const arriveH = 13 + h, arriveM = m; // just for display purposes, countdown framing
-  return `${String(min).padStart(2,'0')} min to 15:00`;
-}
-
 function stepIndexFor(ticketState){
-  const map = {draft:0, queued:1, syncing:2, delivered:3, review:4, awaiting_info:4, correcting:5, published:6};
+  const map = {
+    draft:0, queued:1, syncing:2,
+    delivered:3, reopened:3,
+    review:4, awaiting_info:4, rejected:4, specialist_review:4,
+    correcting:5, published:6,
+    verifying:7, reopen_reason:7,
+    closed:8,
+  };
   return map[ticketState] ?? 0;
 }
 
@@ -303,11 +373,12 @@ function render(){
     ${deadlineBanner()}
     <div class="body">
       ${timeline()}
-      ${state.role==='marek' ? marekView() : inesView()}
+      ${state.role==='marek' ? marekView() : state.role==='office' ? officeView() : inesView()}
     </div>
-    ${state.role==='marek' ? '<button class="fab" onclick="quickReset()" title="Reset scenario">&#8635;</button>' : ''}
+    <button class="fab" onclick="quickReset()" title="Reset scenario">&#8635;</button>
     ${state.lightboxPhoto ? lightbox() : ''}
     ${state.drawerOpen ? drawer() : ''}
+    ${state.rejectDrawerOpen ? rejectDrawer() : ''}
     <div class="snackbar ${state.snackbar?'show':''}">${state.snackbar}</div>
   `;
 }
@@ -322,28 +393,61 @@ function appBar(){
         <div class="appbar-sub">Berlin, Basement · Ticket #FW-0142</div>
       </div>
     </div>
+    <div class="live-clock" id="liveClock">--:--:--</div>
     <div class="role-tabs">
       <button class="role-tab ${state.role==='marek'?'active':''}" onclick="switchRole('marek')">Marek · Field</button>
-      <button class="role-tab ${state.role==='ines'?'active':''}" onclick="switchRole('ines')">Ines · Office</button>
+      <button class="role-tab ${state.role==='office'?'active':''}" onclick="switchRole('office')">Office · Triage</button>
+      <button class="role-tab ${state.role==='ines'?'active':''}" onclick="switchRole('ines')">Ines · Review</button>
     </div>
   </div>`;
 }
 function switchRole(r){ setState({role:r}); }
 
+/* ---------------- Live real-time clock ---------------- */
+function updateLiveClock(){
+  const el = document.getElementById('liveClock');
+  if(el){
+    const d = new Date();
+    el.textContent = d.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  }
+}
+setInterval(updateLiveClock, 1000);
+
+/* ---------------- Live ticking deadline countdown ---------------- */
+let remainingSeconds = state.deadlineMin * 60;
+function fmtCountdown(sec){
+  const m = Math.floor(sec/60), s = sec % 60;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+function tickCountdown(){
+  if(remainingSeconds > 0) remainingSeconds--;
+  const txt = document.getElementById('deadlineCountdown');
+  if(txt) txt.textContent = fmtCountdown(remainingSeconds) + ' remaining';
+  const banner = document.getElementById('deadlineBanner');
+  if(banner){
+    const crit = remainingSeconds <= 30*60;
+    banner.classList.toggle('crit', crit);
+    banner.classList.toggle('ok', !crit);
+    const icon = document.getElementById('deadlineIcon');
+    if(icon) icon.innerHTML = crit ? '&#9888;' : '&#9200;';
+  }
+}
+setInterval(tickCountdown, 1000);
+
 function deadlineBanner(){
-  const crit = state.deadlineMin <= 30;
-  return `<div class="deadline ${crit?'crit':'ok'}">
-    ${crit?'&#9888;':'&#9200;'} Ines leaves the Munich office at 15:00 — <b>${fmtClock(state.deadlineMin)}</b> remaining to confirm the correction.
+  const crit = remainingSeconds <= 30*60;
+  return `<div class="deadline ${crit?'crit':'ok'}" id="deadlineBanner">
+    <span id="deadlineIcon">${crit?'&#9888;':'&#9200;'}</span> Ines leaves the Munich office at 15:00 — <b id="deadlineCountdown">${fmtCountdown(remainingSeconds)} remaining</b> to confirm the correction.
   </div>`;
 }
 
 function timeline(){
   const idx = stepIndexFor(state.ticketState);
   return `<div class="card">
-    <div class="section-label">Shared audit timeline</div>
+    <div class="section-label">Shared audit timeline — tap any stage to jump there and preview it</div>
     <div class="stepper">
       ${STEPS.map((s,i)=>`
-        <div class="step ${i<idx?'done':''} ${i===idx?'active':''}">
+        <div class="step ${i<idx?'done':''} ${i===idx?'active':''}" onclick="jumpToStage(${i})">
           <div class="step-line"></div>
           <div class="step-dot">${i<idx?'&#10003;':i+1}</div>
           <div class="step-label">${s.label}</div>
@@ -364,6 +468,20 @@ function marekView(){
     return syncCard();
   }
   return marekStatusCard();
+}
+
+function wizardStepper(){
+  const labels = ['Reason','Wall','Measure','Photos','Review'];
+  return `<div class="wiz-stepper">
+    ${labels.map((l,i)=>{
+      const n = i+1;
+      const cls = n<state.wizardStep ? 'done' : (n===state.wizardStep ? 'active' : '');
+      return `<div class="wiz-step ${cls}" onclick="setState({wizardStep:${n}})">
+        <div class="wiz-dot">${n<state.wizardStep?'&#10003;':n}</div>
+        <div class="wiz-label">${l}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 
 function marekWizardCard(){
@@ -441,7 +559,8 @@ function marekWizardCard(){
   }
   return `<div class="card">
     <div class="card-title">&#128736; Report a plan mismatch</div>
-    <div class="card-sub">Step ${step} of 5</div>
+    <div class="card-sub">Tap any step below to jump straight to it and review.</div>
+    ${wizardStepper()}
     ${inner}
   </div>`;
 }
@@ -496,9 +615,14 @@ function syncCard(){
 function marekStatusCard(){
   const ts = state.ticketState;
   let body = '';
-  if(ts==='delivered' || ts==='review'){
+  if(ts==='delivered'){
+    body = `<div class="badge badge-warn">With the office</div>
+      <p class="hint" style="margin-top:10px;">Your report has arrived. The office is checking priority and assigning it to the right expert.</p>
+      ${continueBtn('office')}`;
+  } else if(ts==='review'){
     body = `<div class="badge badge-warn">Waiting on Ines</div>
-      <p class="hint" style="margin-top:10px;">Your report is with the office. You'll be notified here the moment Ines responds — no need to call.</p>`;
+      <p class="hint" style="margin-top:10px;">Assigned to Ines and under review. You'll be notified here the moment she responds — no need to call.</p>
+      ${continueBtn('ines')}`;
   } else if(ts==='awaiting_info'){
     body = `<div class="badge badge-err">Ines needs one more detail</div>
       <div class="card" style="margin-top:12px;background:#FAFAFB;">
@@ -506,12 +630,45 @@ function marekStatusCard(){
       </div>
       <div class="field"><label>Your reply</label><textarea rows="3" id="marekReply" placeholder="Type your answer for Ines…"></textarea></div>
       <div class="btn-row"><button class="btn btn-contained" onclick="marekReply()">Send reply</button></div>`;
+  } else if(ts==='rejected'){
+    body = `<div class="badge badge-err">Ines sent this back</div>
+      <div class="card" style="margin-top:12px;background:#FAFAFB;">
+        <div class="card-title" style="font-size:13.5px;">${state.rejectReason || 'This needs another look before it can be corrected.'}</div>
+      </div>
+      <p class="hint" style="margin-top:10px;">Your reasons, wall, measurement and photos are still there — jump to whichever step needs fixing, then resubmit.</p>
+      <div class="btn-row"><button class="btn btn-contained" onclick="fixAndResend()">Fix &amp; resend</button></div>`;
   } else if(ts==='correcting'){
     body = `<div class="badge badge-ok">Confirmed — Ines is applying the correction</div>
-      <p class="hint" style="margin-top:10px;">The plan will update automatically once done.</p>`;
+      <p class="hint" style="margin-top:10px;">The plan will update automatically once done.</p>
+      ${continueBtn('ines')}`;
   } else if(ts==='published'){
-    body = `<div class="badge badge-ok">Plan corrected &amp; published</div>
-      <p class="hint" style="margin-top:10px;">W02 removed, rear wall measurement updated to your on-site reading. You can resume work.</p>`;
+    body = `<div class="badge badge-ok">Plan corrected &amp; published — v1.${state.planVersion}</div>
+      <p class="hint" style="margin-top:10px;">W02 removed, rear wall measurement updated. Please verify the correction on site before this ticket can close.</p>
+      <div class="btn-row"><button class="btn btn-contained" onclick="setState({ticketState:'verifying', verifyAnswer:null})">Start Verification</button></div>`;
+  } else if(ts==='verifying'){
+    body = `
+      <div class="section-label">Does the updated plan match reality?</div>
+      <div class="chip-row">
+        <div class="chip ${state.verifyAnswer==='yes'?'selected':''}" onclick="setState({verifyAnswer:'yes'})">Yes</div>
+        <div class="chip ${state.verifyAnswer==='no'?'selected':''}" onclick="setState({verifyAnswer:'no'})">No</div>
+      </div>
+      <div class="btn-row"><button class="btn btn-contained" ${state.verifyAnswer?'':'disabled'} onclick="continueVerification()">Continue</button></div>`;
+  } else if(ts==='reopen_reason'){
+    const reasons = ['Wrong measurement','Wrong wall','Different issue','Other'];
+    body = `
+      <div class="badge badge-err">Correction could not be verified</div>
+      <div class="section-label" style="margin-top:14px;">Reason</div>
+      <div class="chip-row">
+        ${reasons.map(r=>`<div class="chip ${state.reopenReason===r?'selected':''}" onclick="setState({reopenReason:'${r}'})">${r}</div>`).join('')}
+      </div>
+      <div class="btn-row"><button class="btn btn-error" ${state.reopenReason?'':'disabled'} onclick="reopenTicket()">Reopen Ticket</button></div>`;
+  } else if(ts==='reopened'){
+    body = `<div class="badge badge-err">Ticket reopened</div>
+      <p class="hint" style="margin-top:10px;">Previous history preserved. Reason: <b>${state.reopenReason}</b>. The office is deciding who reviews it next.</p>
+      ${continueBtn('office')}`;
+  } else if(ts==='closed'){
+    body = `<div class="badge badge-ok">Ticket closed</div>
+      <p class="hint" style="margin-top:10px;">Verified on site — the plan matches reality. Ticket #FW-0142 is done.</p>`;
   }
   return `<div class="card">
     <div class="card-title">&#9989; Ticket #FW-0142 status</div>
@@ -524,7 +681,7 @@ function toggleReason(id){
   const has = state.reasons.includes(id);
   setState({reasons: has ? state.reasons.filter(r=>r!==id) : [...state.reasons, id]});
 }
-function selectWall(id){ setState({wallId:id}); }
+function selectWall(id){ setState({wallId:id, wizardStep:3}); }
 function keypadPress(k){
   let m = state.measurement;
   if(k==='clear'){ m=''; }
@@ -555,11 +712,131 @@ function marekReply(){
   setState({ticketState:'review', requestMsg:''});
   showSnack('Reply sent to Ines');
 }
+function continueVerification(){
+  if(state.verifyAnswer==='yes'){
+    setState({ticketState:'closed'});
+    showSnack('Ticket closed — verified on site');
+  } else {
+    setState({ticketState:'reopen_reason'});
+  }
+}
+function reopenTicket(){
+  setState({ticketState:'reopened', assignedTo:null});
+  showSnack('Ticket reopened — history preserved');
+}
 function quickReset(){
   state = {...state, wizardStep:1, reasons:[], wallId:null, measurement:'', photos:[],
     submitted:false, syncPhase:0, ticketState:'draft', drawerOpen:false, requestMsg:'',
-    lightboxPhoto:null, deadlineMin:96};
+    lightboxPhoto:null, deadlineMin:96, officePriority:null, rejectDrawerOpen:false, rejectReason:'',
+    verifyAnswer:null, reopenReason:null, assignedTo:null, planVersion:0};
+  remainingSeconds = state.deadlineMin * 60;
   render();
+}
+
+/* ================= OFFICE VIEW ================= */
+const PRIORITIES = [
+  {id:'standard', label:'Standard', desc:'Route in normal queue order'},
+  {id:'urgent', label:'Urgent', desc:'Crew waiting on site — expedite'},
+  {id:'critical', label:'Critical', desc:'Work blocked, deadline at risk'},
+];
+
+function officeView(){
+  if(!state.submitted || ['draft','queued','syncing'].includes(state.ticketState)){
+    return `<div class="card">
+      <div class="card-title">&#128203; Triage queue</div>
+      <div class="card-sub">No reports waiting — nothing has synced in from the field yet.</div>
+    </div>`;
+  }
+  if(state.ticketState==='delivered'){
+    return officeTriageCard();
+  }
+  if(state.ticketState==='reopened'){
+    return officeReassignCard();
+  }
+  // Already assigned — show a light status card
+  const statusLine = state.ticketState==='published' ? 'plan published — awaiting site verification'
+    : state.ticketState==='verifying' ? 'Marek verifying on site'
+    : state.ticketState==='reopen_reason' ? 'Marek selecting a reopen reason'
+    : state.ticketState==='closed' ? 'closed — verified on site'
+    : state.ticketState==='rejected' ? 'sent back to Marek for correction'
+    : state.ticketState==='specialist_review' ? 'with the specialist review team'
+    : 'with Ines';
+  const nextRole = ['published','verifying','reopen_reason','rejected'].includes(state.ticketState) ? 'marek'
+    : ['review','correcting','specialist_review'].includes(state.ticketState) ? 'ines' : null;
+  return `<div class="card">
+    <div class="card-title">&#128203; Ticket #FW-0142</div>
+    <div class="badge ${['rejected'].includes(state.ticketState)?'badge-err':(state.ticketState==='closed'?'badge-ok':'badge-warn')}">${state.ticketState==='closed'?'Closed':(state.ticketState==='rejected'?'Bounced back':'Assigned')}</div>
+    <p class="hint" style="margin-top:10px;">Priority: <b>${PRIORITIES.find(p=>p.id===state.officePriority)?.label || 'Standard'}</b> · Currently ${statusLine}.</p>
+    ${nextRole ? continueBtn(nextRole) : ''}
+  </div>`;
+}
+
+function officeTriageCard(){
+  const reasonLabels = REASONS.filter(r=>state.reasons.includes(r.id)).map(r=>r.label);
+  return `<div class="flow-grid">
+    <div class="card">
+      <div class="card-title">&#128203; New report from the field</div>
+      <div class="card-sub">Ticket #FW-0142 · Falkenweg, Basement</div>
+      <div class="ticket-row" style="margin-bottom:14px;cursor:default;">
+        <div class="ticket-avatar">M</div>
+        <div class="ticket-meta">
+          <div class="ticket-title">${reasonLabels.join(' · ') || 'Plan mismatch reported'}</div>
+          <div class="ticket-sub">Wall ${state.wallId||'—'} flagged · ${state.photos.length} photo(s) · reported by Marek</div>
+        </div>
+      </div>
+      <div class="section-label">Validate priority</div>
+      <div class="chip-row">
+        ${PRIORITIES.map(p=>`
+          <div class="chip ${state.officePriority===p.id?'selected':''}" onclick="setOfficePriority('${p.id}')" title="${p.desc}">${p.label}</div>
+        `).join('')}
+      </div>
+      <div class="hint">${PRIORITIES.find(p=>p.id===state.officePriority)?.desc || 'Choose a priority so Ines knows how urgent this is.'}</div>
+      <div class="btn-row">
+        <button class="btn btn-contained" ${state.officePriority?'':'disabled'} onclick="assignToInes()">Assign to Ines</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-label">Why this route</div>
+      <div class="info-row"><span>Field crew</span><span>Marek · Berlin site</span></div>
+      <div class="info-row"><span>Assign to</span><span>Ines · Munich office</span></div>
+      <div class="info-row"><span>Ines available until</span><span>15:00</span></div>
+      <p class="hint" style="margin-top:12px;">Office confirms this is worth Ines's time before it lands in her queue — keeps her focused on tickets that actually need an expert.</p>
+    </div>
+  </div>`;
+}
+
+function setOfficePriority(id){ setState({officePriority:id}); }
+function assignToInes(){
+  setState({ticketState:'review'});
+  showSnack('Assigned to Ines · Priority: '+PRIORITIES.find(p=>p.id===state.officePriority).label);
+}
+
+const REASSIGN_OPTIONS = [
+  {id:'ines', label:'Ines', desc:'Same expert — already knows this ticket'},
+  {id:'next', label:'Next Available Expert', desc:'Whoever in the office is free next'},
+  {id:'specialist', label:'Specialist Review', desc:'Escalate to the specialist team for a deeper look'},
+];
+function officeReassignCard(){
+  return `<div class="card">
+    <div class="card-title">&#8617; Ticket reopened — reassign</div>
+    <div class="card-sub">Site verification failed · reason: <b>${state.reopenReason}</b> · previous history preserved</div>
+    <div class="section-label">Assigned to</div>
+    <div class="chip-row">
+      ${REASSIGN_OPTIONS.map(o=>`<div class="chip ${state.assignedTo===o.id?'selected':''}" onclick="setOfficeAssign('${o.id}')" title="${o.desc}">${o.label}</div>`).join('')}
+    </div>
+    <div class="hint">${REASSIGN_OPTIONS.find(o=>o.id===state.assignedTo)?.desc || 'Choose who should take another look.'}</div>
+    <div class="btn-row"><button class="btn btn-contained" ${state.assignedTo?'':'disabled'} onclick="confirmReassign()">Confirm</button></div>
+  </div>`;
+}
+function setOfficeAssign(id){ setState({assignedTo:id}); }
+function confirmReassign(){
+  const label = REASSIGN_OPTIONS.find(o=>o.id===state.assignedTo).label;
+  if(state.assignedTo==='specialist'){
+    setState({ticketState:'specialist_review'});
+  } else {
+    setState({ticketState:'review'});
+  }
+  showSnack('Reassigned to '+label);
 }
 
 /* ================= INES VIEW ================= */
@@ -570,7 +847,14 @@ function inesView(){
       <div class="card-sub">No tickets from Marek yet — waiting for the field report to sync.</div>
     </div>`;
   }
-  if(state.ticketState==='delivered' || state.ticketState==='review'){
+  if(state.ticketState==='delivered'){
+    return `<div class="card">
+      <div class="card-title">&#128194; Inbox</div>
+      <div class="card-sub">A report has landed but hasn't been assigned to you yet — it's with the office for priority triage.</div>
+      ${continueBtn('office')}
+    </div>`;
+  }
+  if(state.ticketState==='review'){
     return inesReviewCard();
   }
   if(state.ticketState==='awaiting_info'){
@@ -578,9 +862,18 @@ function inesView(){
       <div class="card-title">&#8987; Waiting on Marek</div>
       <div class="card-sub">You asked: "${state.requestMsg}"</div>
       <div class="badge badge-warn" style="margin-top:6px;">Request sent — no reply yet</div>
+      ${continueBtn('marek')}
     </div>`;
   }
-  if(state.ticketState==='correcting'){
+  if(state.ticketState==='rejected'){
+    return `<div class="card">
+      <div class="card-title">&#8617; Sent back to Marek</div>
+      <div class="card-sub">You flagged: "${state.rejectReason}"</div>
+      <div class="badge badge-err" style="margin-top:6px;">Waiting for a corrected report</div>
+      ${continueBtn('marek')}
+    </div>`;
+  }
+  if(['correcting'].includes(state.ticketState)){
     return `<div class="card">
       <div class="card-title">&#9881; Applying correction…</div>
       <div class="lin-progress"><div class="lin-progress-bar" style="width:70%"></div></div>
@@ -589,17 +882,42 @@ function inesView(){
   }
   if(state.ticketState==='published'){
     return `<div class="card">
-      <div class="card-title">&#9989; Published</div>
-      <div class="badge badge-ok">Plan corrected and pushed to Falkenweg site</div>
-      <p class="hint" style="margin-top:10px;">Marek has been notified. Ticket #FW-0142 closed.</p>
+      <div class="card-title">&#9989; Published — v1.${state.planVersion}</div>
+      <div class="badge badge-ok">Waiting on Marek to verify on site</div>
+      ${continueBtn('marek')}
+    </div>`;
+  }
+  if(state.ticketState==='verifying' || state.ticketState==='reopen_reason'){
+    return `<div class="card">
+      <div class="card-title">&#9203; With Marek</div>
+      <div class="card-sub">Marek is verifying the correction on site.</div>
+      ${continueBtn('marek')}
+    </div>`;
+  }
+  if(state.ticketState==='reopened'){
+    return `<div class="card">
+      <div class="card-title">&#8617; Ticket reopened</div>
+      <div class="card-sub">Reason: <b>${state.reopenReason}</b>. Office is deciding who reviews it next.</div>
+      ${continueBtn('office')}
+    </div>`;
+  }
+  if(state.ticketState==='specialist_review'){
+    return specialistReviewCard();
+  }
+  if(state.ticketState==='closed'){
+    return `<div class="card">
+      <div class="card-title">&#9989; Ticket closed</div>
+      <div class="badge badge-ok">Verified on site by Marek</div>
     </div>`;
   }
 }
 
 function inesReviewCard(){
   const diff = state.measurement ? parseInt(state.measurement)-PLAN_MEASURE : 0;
+  const reopenBanner = state.assignedTo ? `<div class="badge badge-err" style="margin-bottom:12px;">Reopened ticket — reassigned to ${REASSIGN_OPTIONS.find(o=>o.id===state.assignedTo)?.label}</div>` : '';
   return `<div class="flow-grid">
     <div class="card">
+      ${reopenBanner}
       <div class="card-title">&#128203; Ticket #FW-0142 — Falkenweg, Basement</div>
       <div class="card-sub">Reported by Marek · Site crew lead</div>
       <div class="ticket-row" style="margin-bottom:14px;cursor:default;">
@@ -619,7 +937,7 @@ function inesReviewCard(){
       <div style="margin-top:14px;">${planSvg(false)}</div>
       <div class="btn-row">
         <button class="btn btn-outlined" onclick="setState({drawerOpen:true})">Request more detail</button>
-        <button class="btn btn-error" onclick="showSnack('Marked as rejected — needs re-survey')">Reject</button>
+        <button class="btn btn-error" onclick="setState({rejectDrawerOpen:true})">Reject</button>
         <button class="btn btn-success" onclick="confirmAndCorrect()">Confirm &amp; correct plan</button>
       </div>
     </div>
@@ -635,13 +953,28 @@ function inesReviewCard(){
   </div>`;
 }
 
+function specialistPublish(){
+  const v = state.planVersion + 1;
+  setState({ticketState:'published', planVersion:v});
+  showSnack('Specialist review complete — republished v1.'+v);
+}
+function specialistReviewCard(){
+  return `<div class="card">
+    <div class="card-title">&#128300; Specialist review</div>
+    <div class="card-sub">Escalated by the office · reason: <b>${state.reopenReason}</b></div>
+    <p class="hint">Taking a deeper look at wall ${state.wallId||'—'} and the rear-wall measurement before republishing.</p>
+    <div class="btn-row"><button class="btn btn-success" onclick="specialistPublish()">Complete review &amp; republish plan</button></div>
+  </div>`;
+}
+
 function confirmAndCorrect(){
   setState({ticketState:'correcting'});
   showSnack('Correction started');
 }
 function finishCorrection(){
-  setState({ticketState:'published'});
-  showSnack('Plan published to site');
+  const v = state.planVersion + 1;
+  setState({ticketState:'published', planVersion:v});
+  showSnack('Plan published to site — v1.'+v);
 }
 
 /* ---- Drawer (Ines request-info) ---- */
@@ -677,6 +1010,42 @@ function sendRequest(){
   showSnack('Request sent to Marek');
 }
 
+function rejectDrawer(){
+  return `<div class="drawer-scrim" onclick="closeRejectDrawerIfScrim(event)">
+    <div class="drawer">
+      <h3>Send back to Marek</h3>
+      <p class="hint">This closes your review and returns the ticket to Marek for correction — he'll see it on his device.</p>
+      <div class="field">
+        <label>What's wrong with this report?</label>
+        <textarea rows="4" id="rejectMsg" placeholder="e.g. Measurement still looks off — please re-check."></textarea>
+      </div>
+      <div class="field">
+        <label>Suggested prompts</label>
+        <div class="chip-row">
+          <div class="chip" onclick="fillReject('Measurement still looks off — please re-check the rear wall.')">Bad measurement</div>
+          <div class="chip" onclick="fillReject('Photo doesn\\'t clearly show the flagged wall — please retake it.')">Unclear photo</div>
+          <div class="chip" onclick="fillReject('This needs a full re-survey of the zone before I can correct the plan.')">Needs re-survey</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-text" onclick="setState({rejectDrawerOpen:false})">Cancel</button>
+        <button class="btn btn-error" onclick="sendReject()">Send back</button>
+      </div>
+    </div>
+  </div>`;
+}
+function fillReject(t){ document.getElementById('rejectMsg').value = t; }
+function closeRejectDrawerIfScrim(e){ if(e.target.classList.contains('drawer-scrim')) setState({rejectDrawerOpen:false}); }
+function sendReject(){
+  const msg = document.getElementById('rejectMsg').value || 'This needs another look before it can be corrected.';
+  setState({rejectDrawerOpen:false, ticketState:'rejected', rejectReason:msg});
+  showSnack('Sent back to Marek for correction');
+}
+function fixAndResend(){
+  setState({ticketState:'draft', wizardStep:5});
+  showSnack('Back in your report — jump to the step that needs fixing');
+}
+
 /* ---- Lightbox ---- */
 function lightbox(){
   const p = state.lightboxPhoto;
@@ -691,6 +1060,8 @@ function lightbox(){
 function closeLightboxIfScrim(e){ if(e.target.classList.contains('lightbox-scrim')) setState({lightboxPhoto:null}); }
 
 render();
+updateLiveClock();
+tickCountdown();
 </script>
 </body>
 </html>
