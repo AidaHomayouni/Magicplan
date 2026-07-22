@@ -3,207 +3,269 @@
 **magicplan Product Design Challenge**
 
 **Author:** Aida Homayouni
-**Estimated reading time:** ~6 minutes
+
+🌐 **Live Prototype:** https://aidahomayouni.github.io/Magicplan/
+
+💻 **GitHub Repository:** https://github.com/AidaHomayouni/Magicplan
+
+⏱ **Estimated reading time:** 8 minutes
 
 ---
 
-## Live Prototype
+# Overview
 
-- **Prototype:** [aidahomayouni.github.io/Magicplan](https://aidahomayouni.github.io/Magicplan/)
-- **GitHub Repository:** [github.com/AidaHomayouni/Magicplan](https://github.com/AidaHomayouni/Magicplan)
+At first glance, this challenge looks like a floor plan reporting problem.
+
+After reviewing the ticket, voice note, personas, and timeline, I realised that the real challenge is different.
+
+The goal is not to report an issue.
+
+The goal is to help a remote expert understand enough to confidently update the floor plan before leaving at **15:00**, despite poor connectivity and time pressure.
+
+This insight shaped every design decision.
+
+Instead of designing another issue reporting tool, I created an **Offline-First Structured Evidence Handoff** that helps the right information reach the right person at the right time.
 
 ---
 
-## Stakeholders & Their Role
+# Understanding the Challenge
 
-Although the prototype focuses on the operational workflow between Marek, the Office, and Ines, the challenge introduces additional stakeholders whose perspectives influenced the design.
+The scenario connects two completely different working environments.
 
-| Stakeholder | Role | Influence on the Solution |
-|-------------|------|---------------------------|
-| **Marek** | Crew Lead (Construction Site) | Detects the floor plan mismatch, captures structured evidence, and submits a high-priority report despite poor connectivity. |
-| **Ines** | Remote Technical Expert | Reviews the evidence, validates the issue, updates the official floor plan, and publishes the corrected version. |
-| **Office / Dispatcher** | Operations | Confirms ticket priority, assigns the correct expert, and keeps the workflow moving efficiently. |
-| **Konstantin** | Product Designer | Represents usability and interaction quality. His perspective encouraged an interface with minimal cognitive load, large touch targets, and a clear workflow for field users. |
-| **Finn** | Product Owner | Represents product and business objectives. The workflow is designed to improve measurable outcomes such as faster resolution, fewer clarification requests, and reduced downtime. |
-| **Loïc** | Engineering | Represents technical feasibility. His perspective influenced the offline-first architecture, reliable synchronization, lightweight payloads, and resilient error handling. |
-| **Bernd** | Chief Product Officer (CPO) | Represents strategic business goals. The solution aims to reduce operational delays, improve customer confidence, and support scalable workflows across construction projects. |
+### Construction Site
 
-### Stakeholder Map
+- Weak cellular connection
+- Dusty environment
+- Workers wearing gloves
+- Limited time
+- Crew waiting
+- Owner on site
+
+### Technical Office
+
+- Desktop environment
+- High information density
+- Precise floor plan editing
+- Need for reliable evidence
+- Fixed deadline
+
+The challenge is to bridge these two environments without relying on phone calls or long conversations.
+
+---
+
+# Solution
+
+The solution focuses on structured evidence instead of communication.
+
+Every report contains:
+
+- Selected wall
+- Verified measurement
+- Difference from the original plan
+- Reference photo
+- Priority
+- Timestamp
+
+Instead of asking users to explain the problem, the workflow provides everything needed to make a confident decision.
+
+---
+
+# Workflow
 
 ```text
-                 Product Strategy
+Issue Detected
+      │
+      ▼
+Marek Captures Evidence
+      │
+      ▼
+Offline Queue
+      │
+      ▼
+Office Review
+      │
+      ▼
+Assigned to Ines
+      │
+      ▼
+Review Evidence
+      │
+      ▼
+Update Floor Plan
+      │
+      ▼
+Publish
+      │
+      ▼
+Site Verification
+      │
+      ├───────────────┐
+      ▼               ▼
+Verified       Still Incorrect
+      │               │
+      ▼               ▼
+Close Ticket   Reopen Ticket
                       │
-                   Bernd (CPO)
-                      │
-         ┌────────────┴────────────┐
-         │                         │
- Finn (Product)           Konstantin (UX)
-         │                         │
-         └────────────┬────────────┘
-                      │
-                Product Workflow
-                      │
-          Office / Dispatcher
-                      │
-          assigns & prioritises
-                      │
-        ┌─────────────┴─────────────┐
-        │                           │
-   Marek (Field)  ───────────►  Ines (Expert)
-        │                       ▲
-        └──── structured evidence┘
-                      │
-                 Built on reliable
-                offline infrastructure
-                      │
-                  Loïc (Engineering)
+                      ▼
+             Specialist Review
 ```
 
 ---
 
-## Overview
+# Stakeholders
 
-This challenge initially appears to be about reporting a floor plan issue.
+Although only a few users interact directly with the interface, several stakeholders influenced the design.
 
-After reviewing the scenario, personas, timeline, and supporting materials, I concluded that the real challenge is different: the goal is not simply to report an issue, but to help a remote expert understand enough to confidently correct the floor plan before leaving at **15:00** — without requiring a phone or video call.
-
-This insight shaped every design decision. Instead of building another reporting form, I designed a structured evidence handoff between the construction site and the remote expert.
-
----
-
-## The Solution
-
-The prototype follows the complete journey from discovering a mismatch on-site to publishing a corrected floor plan, across three roles:
-
-- **Marek** — captures structured evidence on-site.
-- **Office** — validates priority and assigns the ticket.
-- **Ines** — reviews the evidence, updates the plan, and publishes the corrected version.
-
-Rather than exchanging unstructured messages, the workflow focuses on delivering exactly the information needed to make a confident decision.
-
-This case study itself follows a similar handoff logic: each stakeholder above — Konstantin, Finn, Loïc, and Bernd — brings a distinct lens (UX, product, engineering, strategy), and the writeup below speaks to all four.
+| Stakeholder | Role |
+|-------------|------|
+| 👷 Marek | Captures structured evidence and verifies the updated plan on site. |
+| 🏢 Office | Confirms ticket priority, assigns experts, and coordinates escalations. |
+| 📐 Ines | Reviews evidence, updates the floor plan, and requests additional information when necessary. |
+| 👨‍🔧 Technical Specialist | Reviews complex cases that require additional expertise. |
+| 🎨 Konstantin | Represents usability, accessibility, and workflow clarity. |
+| ⚙️ Loïc | Represents technical feasibility, offline synchronization, and reliability. |
+| 📊 Finn | Represents business goals, prioritisation, and measurable product outcomes. |
+| 🎯 Bernd | Represents long-term product strategy and operational efficiency. |
 
 ---
 
-## Key Design Decisions
+# Key Design Decisions
 
 ### Separate Responsibilities
 
-Each user has a different responsibility:
+Every role has one clear responsibility.
 
 - Marek captures reality.
-- The office validates urgency.
-- Ines corrects the official floor plan.
+- Office coordinates the workflow.
+- Ines updates the official floor plan.
 
-Separating these responsibilities reduces cognitive load, avoids accidental edits, and reflects how these teams already work.
+This reduces cognitive load and prevents accidental changes.
 
-### Structured Evidence Instead of Communication
+### Structured Evidence
 
-The workflow is based on one simple principle:
+Instead of free-form communication, every report is built around one wall, one verified measurement, and one reference photo.
 
-> One wall. One measurement. One reference photo.
-
-Every piece of evidence belongs to a specific location, making the information easy to understand without additional clarification.
-
-### Design Around Time
-
-Time is one of the most important constraints. Since Ines leaves at **15:00**, the interface always communicates:
-
-- Remaining time
-- Current ticket status
-- Current owner
-- Next action
-
-The goal is to keep the workflow moving without unnecessary delays.
+This reduces ambiguity and speeds up expert review.
 
 ### Offline First
 
-Poor connectivity is part of the working environment. Reports are saved locally before uploading, so users receive immediate confirmation that their work is safe, while synchronization happens automatically once a connection is available.
+Weak connectivity is expected rather than treated as an exception.
 
-This allows Marek to return to his crew immediately instead of waiting for the network.
+Reports are saved locally before uploading, allowing Marek to continue working while synchronization happens in the background.
+
+### Time Awareness
+
+Time is one of the most important constraints.
+
+The interface always communicates:
+
+- Remaining time
+- Current ticket owner
+- Ticket status
+- Next action
+
+This helps users prioritise instead of simply displaying a countdown.
 
 ---
 
-## What I Deliberately Left Out
+# Validation & Escalation
 
-To keep the solution focused, I intentionally excluded features that do not improve this workflow:
+Publishing a corrected floor plan does not automatically complete the workflow.
 
-- Video calls
+The final validation happens on site.
+
+After receiving the updated plan, Marek verifies whether it matches reality.
+
+Possible outcomes include:
+
+- ✅ The correction is verified and the ticket is closed.
+- 📷 Additional evidence is required, allowing Ines to request one specific measurement or photo.
+- 🔄 The correction is still incorrect, so the existing ticket is reopened and reassigned to the same expert or another specialist while preserving the complete history.
+
+This creates a resilient workflow instead of assuming every issue is solved on the first attempt.
+
+---
+
+# Edge Cases
+
+The prototype considers several real-world situations, including:
+
+- Weak connectivity
+- Offline reporting
+- Interrupted uploads
+- Missing or unclear evidence
+- Ticket reopening
+- Specialist review
+- Expert unavailable
+- Shift changes
+
+---
+
+# What I Left Out
+
+To keep the solution focused, I intentionally excluded:
+
 - Chat
+- Video calls
 - AI-generated corrections
-- AR or LiDAR scanning
+- AR / LiDAR scanning
 - Authentication
-- Project management features
+- Project management
 - Cost estimation
 - Permit management
 
-While these features may exist in a larger product, they do not help solve the problem presented in this challenge.
+These features increase complexity without improving the core workflow.
 
 ---
 
-## One Idea That Didn't Survive
+# One Idea That Didn't Survive
 
-I initially explored using a video walkthrough. Although it seemed useful, it introduced several problems:
+Initially, I explored using video walkthroughs.
 
-- Large uploads over weak connections
-- Longer review times
-- Difficult navigation
-- Unstructured information
+Although they seemed useful, they created larger uploads, slower reviews, and unstructured information.
 
-Replacing video with structured evidence made the review process faster, clearer, and more reliable.
+Replacing video with structured evidence resulted in a faster, simpler, and more reliable workflow.
 
 ---
 
-## Development Process
+# Development Process
 
-My process focused on understanding the problem before designing the interface:
+My process focused on understanding the problem before designing the interface.
 
-1. Reviewed the challenge materials, personas, timeline, and research insights.
-2. Defined the core problem and success criteria.
-3. Mapped the complete workflow from discovery to resolution.
-4. Explored multiple concepts before selecting the structured evidence approach.
-5. Designed role-specific interfaces for Marek, the Office, and Ines.
-6. Built an interactive prototype to validate the workflow.
+1. Reviewed the challenge material and identified the operational constraints.
+2. Defined the success criteria.
+3. Mapped the complete workflow.
+4. Explored multiple concepts.
+5. Designed role-specific interfaces.
+6. Built an interactive prototype.
+7. Refined the experience by considering failure paths, validation, and ticket reopening.
 
 ---
 
-## AI Usage
+# AI Usage
 
-AI supported my workflow during the design process. I used AI to:
-
-- Review UX flows
-- Challenge assumptions
-- Explore alternative solutions
-- Improve microcopy
-- Identify edge cases
-- Review accessibility
-- Speed up implementation
+AI supported my workflow by helping me review UX flows, challenge assumptions, explore alternative solutions, improve microcopy, identify edge cases, and speed up implementation.
 
 All product decisions, prioritisation, interaction design, and final solutions were made by me.
 
 ---
 
-## What I Would Test
+# Success Metrics
 
-Before shipping, I would validate:
-
-- Can Marek complete a report in under two minutes?
-- Can Ines resolve the issue without additional clarification?
-- Does structured evidence reduce follow-up questions?
-- Does offline synchronization work reliably?
-- Do users understand the difference between requested and confirmed P1 priority?
-
-Success would be measured through:
+If this solution were implemented, I would measure:
 
 - Report completion time
+- Time to expert understanding
 - Time to resolution
-- Clarification requests
 - First-time resolution rate
+- Ticket reopen rate
+- Clarification requests
+- Phone calls avoided
 - User confidence
 
 ---
 
-## Tech Stack
+# Tech Stack
 
 - React
 - TypeScript
@@ -215,7 +277,7 @@ Success would be measured through:
 
 ---
 
-## Run Locally
+# Run Locally
 
 ```bash
 npm install
@@ -224,10 +286,12 @@ npm run dev
 
 ---
 
-## Final Reflection
+# Final Reflection
 
-This challenge is not about reporting a floor plan issue. It is about reducing uncertainty between people working in different environments under time pressure.
+This challenge is not simply about reporting a floor plan issue.
 
-Marek needs speed. Ines needs clarity. The office needs visibility.
+It is about reducing uncertainty between people working in different environments under significant time pressure.
 
-The product succeeds when the right evidence reaches the right expert early enough for a confident decision to be made before time runs out.
+By designing an offline-first workflow, structuring evidence, defining clear responsibilities, and supporting validation, reassignment, and ticket reopening, I aimed to create a solution that reflects how construction teams actually work.
+
+The workflow is only complete when the updated plan has been verified on site and everyone can move forward with confidence.
