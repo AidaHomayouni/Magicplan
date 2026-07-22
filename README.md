@@ -14,6 +14,22 @@
 
 ---
 
+## People in the Story
+
+**In the scenario:**
+
+- **Marek** — Crew lead, Berlin site. Discovers the mismatch and captures evidence.
+- **Ines** — Remote expert, Munich. Reviews the evidence and publishes the corrected plan.
+
+**Reviewing this challenge:**
+
+- **Konstantin** — Product Design, my point of contact for this challenge.
+- **Bernd** — CPO.
+- **Finn** — Product Owner.
+- **Loïc** — Engineering.
+
+---
+
 ## Overview
 
 This challenge initially appears to be about reporting a floor plan issue.
@@ -33,6 +49,8 @@ The prototype follows the complete journey from discovering a mismatch on-site t
 - **Ines** — reviews the evidence, updates the plan, and publishes the corrected version.
 
 Rather than exchanging unstructured messages, the workflow focuses on delivering exactly the information needed to make a confident decision.
+
+This case study itself follows a similar handoff logic: Konstantin briefed me on the challenge, and Bernd, Finn, and Loïc are reviewing this submission from their respective CPO, Product, and Engineering perspectives — so the writeup below speaks to all three.
 
 ---
 
