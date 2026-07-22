@@ -14,19 +14,50 @@
 
 ---
 
-## People in the Story
+## Stakeholders & Their Role
 
-**In the scenario:**
+Although the prototype focuses on the operational workflow between Marek, the Office, and Ines, the challenge introduces additional stakeholders whose perspectives influenced the design.
 
-- **Marek** — Crew lead, Berlin site. Discovers the mismatch and captures evidence.
-- **Ines** — Remote expert, Munich. Reviews the evidence and publishes the corrected plan.
+| Stakeholder | Role | Influence on the Solution |
+|-------------|------|---------------------------|
+| **Marek** | Crew Lead (Construction Site) | Detects the floor plan mismatch, captures structured evidence, and submits a high-priority report despite poor connectivity. |
+| **Ines** | Remote Technical Expert | Reviews the evidence, validates the issue, updates the official floor plan, and publishes the corrected version. |
+| **Office / Dispatcher** | Operations | Confirms ticket priority, assigns the correct expert, and keeps the workflow moving efficiently. |
+| **Konstantin** | Product Designer | Represents usability and interaction quality. His perspective encouraged an interface with minimal cognitive load, large touch targets, and a clear workflow for field users. |
+| **Finn** | Product Owner | Represents product and business objectives. The workflow is designed to improve measurable outcomes such as faster resolution, fewer clarification requests, and reduced downtime. |
+| **Loïc** | Engineering | Represents technical feasibility. His perspective influenced the offline-first architecture, reliable synchronization, lightweight payloads, and resilient error handling. |
+| **Bernd** | Chief Product Officer (CPO) | Represents strategic business goals. The solution aims to reduce operational delays, improve customer confidence, and support scalable workflows across construction projects. |
 
-**Reviewing this challenge:**
+### Stakeholder Map
 
-- **Konstantin** — Product Design, my point of contact for this challenge.
-- **Bernd** — CPO.
-- **Finn** — Product Owner.
-- **Loïc** — Engineering.
+```text
+                 Product Strategy
+                      │
+                   Bernd (CPO)
+                      │
+         ┌────────────┴────────────┐
+         │                         │
+ Finn (Product)           Konstantin (UX)
+         │                         │
+         └────────────┬────────────┘
+                      │
+                Product Workflow
+                      │
+          Office / Dispatcher
+                      │
+          assigns & prioritises
+                      │
+        ┌─────────────┴─────────────┐
+        │                           │
+   Marek (Field)  ───────────►  Ines (Expert)
+        │                       ▲
+        └──── structured evidence┘
+                      │
+                 Built on reliable
+                offline infrastructure
+                      │
+                  Loïc (Engineering)
+```
 
 ---
 
@@ -50,7 +81,7 @@ The prototype follows the complete journey from discovering a mismatch on-site t
 
 Rather than exchanging unstructured messages, the workflow focuses on delivering exactly the information needed to make a confident decision.
 
-This case study itself follows a similar handoff logic: Konstantin briefed me on the challenge, and Bernd, Finn, and Loïc are reviewing this submission from their respective CPO, Product, and Engineering perspectives — so the writeup below speaks to all three.
+This case study itself follows a similar handoff logic: each stakeholder above — Konstantin, Finn, Loïc, and Bernd — brings a distinct lens (UX, product, engineering, strategy), and the writeup below speaks to all four.
 
 ---
 
