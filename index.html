@@ -224,6 +224,31 @@
     cursor:pointer;z-index:60;}
   .reset-link{font-size:11.5px;color:var(--ink-4);cursor:pointer;text-decoration:underline;}
 
+  /* ---------- Chat thread (Marek & Ines) ---------- */
+  .chat-messages{max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:9px;
+    padding:12px;background:#FAFAFB;border-radius:var(--radius);border:1px solid var(--line-soft);}
+  .chat-bubble{max-width:75%;padding:9px 13px;border-radius:15px;font-size:13px;}
+  .chat-bubble.mine{align-self:flex-end;background:var(--primary-light);border-bottom-right-radius:4px;}
+  .chat-bubble.theirs{align-self:flex-start;background:#EEEEF0;border-bottom-left-radius:4px;}
+  .chat-meta{font-size:10px;color:var(--ink-4);margin-bottom:3px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.3px;}
+  .chat-text{color:var(--ink-1);line-height:1.4;}
+  .chat-input-row{display:flex;gap:8px;margin-top:12px;align-items:center;}
+  .chat-input-row input{flex:1;border:1.5px solid var(--line);border-radius:22px;padding:10px 16px;
+    font-size:13px;font-family:inherit;}
+  .chat-input-row input:focus{outline:none;border-color:var(--primary);}
+  .chat-icon-btn{width:38px;height:38px;border-radius:50%;border:none;background:var(--primary);
+    color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;}
+  .chat-icon-btn.mic{background:#fff;color:var(--primary);border:1.5px solid var(--primary);}
+  .voice-bubble{padding:9px 13px;}
+  .voice-row{display:flex;align-items:center;gap:9px;}
+  .voice-play{width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;cursor:pointer;}
+  .voice-wave{display:flex;align-items:flex-end;gap:2px;height:20px;}
+  .voice-wave span{width:2.5px;background:var(--primary);border-radius:2px;opacity:.6;display:block;}
+  .voice-duration{font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums;flex-shrink:0;}
+
   /* ---------- Wizard mini-stepper (clickable) ---------- */
   .wiz-stepper{display:flex;margin-bottom:18px;}
   .wiz-step{display:flex;flex-direction:column;align-items:center;flex:1;cursor:pointer;
@@ -294,6 +319,7 @@ let state = {
   reopenReason: null,
   assignedTo: null,     // 'ines' | 'next' | 'specialist'
   planVersion: 0,
+  messages: [], // {id, from:'marek'|'ines', type:'text'|'voice', text?, duration?, bars?, time}
 };
 
 const REASONS = [
@@ -374,6 +400,7 @@ function render(){
     <div class="body">
       ${timeline()}
       ${state.role==='marek' ? marekView() : state.role==='office' ? officeView() : inesView()}
+      ${chatAvailable() && state.role!=='office' ? chatCard() : ''}
     </div>
     <button class="fab" onclick="quickReset()" title="Reset scenario">&#8635;</button>
     ${state.lightboxPhoto ? lightbox() : ''}
@@ -381,6 +408,8 @@ function render(){
     ${state.rejectDrawerOpen ? rejectDrawer() : ''}
     <div class="snackbar ${state.snackbar?'show':''}">${state.snackbar}</div>
   `;
+  const chatBox = document.getElementById('chatMessages');
+  if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function appBar(){
@@ -724,11 +753,67 @@ function reopenTicket(){
   setState({ticketState:'reopened', assignedTo:null});
   showSnack('Ticket reopened — history preserved');
 }
+/* ---------------- Chat thread (Marek & Ines) ---------------- */
+function chatAvailable(){
+  return state.submitted && !['draft','queued','syncing','delivered'].includes(state.ticketState);
+}
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function chatCard(){
+  return `<div class="card">
+    <div class="card-title">&#128172; Direct messages — Marek &amp; Ines</div>
+    <div class="card-sub">Opened once Ines starts the review. You're messaging as ${ROLE_LABEL[state.role]}.</div>
+    <div class="chat-messages" id="chatMessages">
+      ${state.messages.length===0
+        ? `<div class="hint" style="text-align:center;padding:18px 0;">No messages yet — say hello.</div>`
+        : state.messages.map(chatBubble).join('')}
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="Message as ${ROLE_LABEL[state.role]}…"
+        onkeydown="if(event.key==='Enter'){ sendChatText(); }">
+      <button class="chat-icon-btn" onclick="sendChatText()" title="Send message">&#10148;</button>
+      <button class="chat-icon-btn mic" onclick="sendChatVoice()" title="Send voice note">&#127908;</button>
+    </div>
+  </div>`;
+}
+function chatBubble(m){
+  const mine = m.from === state.role;
+  const name = ROLE_LABEL[m.from];
+  if(m.type==='voice'){
+    return `<div class="chat-bubble ${mine?'mine':'theirs'} voice-bubble">
+      <div class="chat-meta">${name} · ${m.time}</div>
+      <div class="voice-row">
+        <div class="voice-play" onclick="showSnack('Playing voice note')">&#9654;</div>
+        <div class="voice-wave">${m.bars.map(h=>`<span style="height:${h}px;"></span>`).join('')}</div>
+        <div class="voice-duration">0:${String(m.duration).padStart(2,'0')}</div>
+      </div>
+    </div>`;
+  }
+  return `<div class="chat-bubble ${mine?'mine':'theirs'}">
+    <div class="chat-meta">${name} · ${m.time}</div>
+    <div class="chat-text">${escapeHtml(m.text)}</div>
+  </div>`;
+}
+function nowClock(){ return new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
+function sendChatText(){
+  const el = document.getElementById('chatInput');
+  const text = el && el.value.trim();
+  if(!text) return;
+  setState({messages:[...state.messages, {id:Date.now(), from:state.role, type:'text', text, time:nowClock()}]});
+}
+function sendChatVoice(){
+  const duration = 3 + Math.floor(Math.random()*10);
+  const bars = Array.from({length:18}, ()=> 4 + Math.floor(Math.random()*16));
+  setState({messages:[...state.messages, {id:Date.now(), from:state.role, type:'voice', duration, bars, time:nowClock()}]});
+  showSnack('Voice note sent');
+}
+
 function quickReset(){
   state = {...state, wizardStep:1, reasons:[], wallId:null, measurement:'', photos:[],
     submitted:false, syncPhase:0, ticketState:'draft', drawerOpen:false, requestMsg:'',
     lightboxPhoto:null, deadlineMin:96, officePriority:null, rejectDrawerOpen:false, rejectReason:'',
-    verifyAnswer:null, reopenReason:null, assignedTo:null, planVersion:0};
+    verifyAnswer:null, reopenReason:null, assignedTo:null, planVersion:0, messages:[]};
   remainingSeconds = state.deadlineMin * 60;
   render();
 }
